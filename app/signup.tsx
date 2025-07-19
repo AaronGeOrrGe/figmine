@@ -1,8 +1,9 @@
 // app/signup.tsx
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { signup } from '../api/auth';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function SignupScreen() {
     return /\S+@\S+\.\S+/.test(email);
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setError('');
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill out all fields.');
@@ -38,11 +39,14 @@ export default function SignupScreen() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Simulate successful signup
+    try {
+      await signup({ name, email, password });
       router.replace('/(tabs)/recents');
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

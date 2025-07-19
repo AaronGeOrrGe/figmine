@@ -1,8 +1,9 @@
 // app/login.tsx
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { login } from '../api/auth';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function LoginScreen() {
     return /\S+@\S+\.\S+/.test(email);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError('');
     if (!email || !password) {
       setError('Please enter both email and password.');
@@ -28,11 +29,14 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Simulate successful login
+    try {
+      await login({ email, password });
       router.replace('/(tabs)/recents');
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

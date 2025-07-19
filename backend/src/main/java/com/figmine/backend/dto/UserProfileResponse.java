@@ -11,4 +11,6 @@ public class UserProfileResponse {
     private String name;
     private String avatarUrl;
     private boolean onboardingComplete;
+    private java.time.Instant createdAt;
+    private java.time.Instant updatedAt;
 }

@@ -6,6 +6,7 @@ import com.figmine.backend.model.User;
 import com.figmine.backend.service.AuthService;
 import com.figmine.backend.service.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,19 +14,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
     private final AuthService authService;
     private final JwtService jwtService;
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody UserSignupRequest request) {
+    public ResponseEntity<Map<String, Object>> signup(@RequestBody UserSignupRequest request) {
         User user = authService.signup(request);
         String token = jwtService.generateToken(user.getEmail());
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("token", token);
-        return ResponseEntity.ok(resp);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("email", user.getEmail());
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
@@ -33,10 +38,16 @@ public class AuthController {
         return authService.login(request)
                 .<ResponseEntity<?>>map(user -> {
                     String token = jwtService.generateToken(user.getEmail());
-                    Map<String, Object> resp = new HashMap<>();
-                    resp.put("token", token);
-                    return ResponseEntity.ok(resp);
+
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("token", token);
+                    response.put("email", user.getEmail());
+
+                    return ResponseEntity.ok(response);
                 })
-                .orElse(ResponseEntity.status(401).body("Invalid credentials"));
+                .orElseGet(() ->
+                        ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(Map.of("error", "Invalid credentials"))
+                );
     }
 }

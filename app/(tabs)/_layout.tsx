@@ -32,25 +32,23 @@ export default function TabsLayout() {
         },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = '';
-
           if (route.name === 'recents') {
             iconName = 'time-outline';
+          } else if (route.name === 'templates') {
+            iconName = 'grid-outline';
           } else if (route.name === 'search') {
             iconName = 'search-outline';
-          } else if (route.name === 'activity') {
-            iconName = 'notifications-outline';
           } else if (route.name === 'mirror') {
             iconName = 'phone-portrait-outline';
           }
-
           return <Ionicons name={iconName as any} size={20} color={color} />;
         },
       })}
     >
       <Tabs.Screen name="recents" options={{ title: 'Recents' }} />
-      <Tabs.Screen name="search" options={{ title: 'Search' }} />
-      <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
-      <Tabs.Screen name="mirror" options={{ title: 'Mirror' }} />
+<Tabs.Screen name="templates" options={{ title: 'Templates' }} />
+<Tabs.Screen name="search" options={{ title: 'Search' }} />
+<Tabs.Screen name="mirror" options={{ title: 'Mirror' }} />
 
     </Tabs>
   );
