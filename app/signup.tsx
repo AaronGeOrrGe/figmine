@@ -1,9 +1,10 @@
 // app/signup.tsx
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { signup } from '../api/auth';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -16,34 +17,51 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
-  const validateEmail = (email: string) => {
-    return /\S+@\S+\.\S+/.test(email);
-  };
+  const validateEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 
   const handleSignup = async () => {
     setError('');
+
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill out all fields.');
       return;
     }
+
     if (!validateEmail(email)) {
       setError('Please enter a valid email address.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
       return;
     }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
+
     setLoading(true);
+
     try {
-      await signup({ name, email, password });
-      router.replace('/(tabs)/recents');
+      const response = await axios.post('https://forge-deploy-42u1.onrender.com/api/auth/signup', {
+        name,
+        email,
+        password,
+      });
+
+      const token = response.data.token;
+      if (token) {
+        await AsyncStorage.setItem('token', token);
+        console.log('Token saved:', token);
+        router.replace('/(tabs)/recents');
+      } else {
+        setError('Signup failed: No token received.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      console.error('Signup error:', err?.response?.data?.message || err.message);
+      setError(err?.response?.data?.message || 'Signup failed.');
     } finally {
       setLoading(false);
     }
@@ -51,8 +69,9 @@ export default function SignupScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Create a Figma Account</Text>
+      <Text style={styles.header}>Create an Account</Text>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
       <TextInput
         style={styles.input}
         placeholder="Full Name"
@@ -67,6 +86,7 @@ export default function SignupScreen() {
         value={email}
         onChangeText={setEmail}
       />
+
       <View style={styles.passwordContainer}>
         <TextInput
           style={styles.passwordInput}
@@ -77,18 +97,13 @@ export default function SignupScreen() {
           autoCapitalize="none"
         />
         <TouchableOpacity
-          onPress={() => setShowPassword((prev) => !prev)}
+          onPress={() => setShowPassword(prev => !prev)}
           style={styles.eyeIcon}
-          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-          activeOpacity={0.7}
         >
-          <Ionicons
-            name={showPassword ? 'eye-off' : 'eye'}
-            size={22}
-            color="#888"
-          />
+          <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#888" />
         </TouchableOpacity>
       </View>
+
       <View style={styles.passwordContainer}>
         <TextInput
           style={styles.passwordInput}
@@ -99,25 +114,23 @@ export default function SignupScreen() {
           autoCapitalize="none"
         />
         <TouchableOpacity
-          onPress={() => setShowConfirmPassword((prev) => !prev)}
+          onPress={() => setShowConfirmPassword(prev => !prev)}
           style={styles.eyeIcon}
-          accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
-          activeOpacity={0.7}
         >
-          <Ionicons
-            name={showConfirmPassword ? 'eye-off' : 'eye'}
-            size={22}
-            color="#888"
-          />
+          <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={22} color="#888" />
         </TouchableOpacity>
       </View>
+
       <TouchableOpacity
         style={[styles.signupButton, loading && { opacity: 0.7 }]}
         onPress={handleSignup}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>{loading ? 'Signing up...' : 'Sign Up'}</Text>
+        <Text style={styles.buttonText}>
+          {loading ? 'Signing up...' : 'Sign Up'}
+        </Text>
       </TouchableOpacity>
+
       <TouchableOpacity onPress={() => router.push('/login')}>
         <Text style={styles.switchText}>
           Already have an account? <Text style={styles.link}>Log in</Text>
@@ -167,14 +180,15 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   signupButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#1c1c3c',
     padding: 14,
     borderRadius: 6,
     marginBottom: 16,
   },
   buttonText: {
-    color: '#000',
+    color: '#fff',
     textAlign: 'center',
+    fontWeight: 'bold',
   },
   errorText: {
     color: '#d32f2f',
@@ -184,6 +198,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     textAlign: 'center',
+    fontSize: 15,
   },
   link: {
     color: '#007bff',

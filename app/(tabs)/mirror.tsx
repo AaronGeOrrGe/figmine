@@ -70,7 +70,7 @@ export default function MirrorScreen() {
         alert('Canvas not ready');
         return;
       }
-      const uri = await captureRef(canvasRef, { format: 'png', quality: 0.95 });
+      const uri = await captureRef(canvasRef.current, { format: 'png', quality: 0.95 });
       const fileName = `figmine-diagram-${Date.now()}.png`;
       const tempPath = FileSystem.cacheDirectory + fileName;
       await FileSystem.copyAsync({ from: uri, to: tempPath });
@@ -120,7 +120,7 @@ export default function MirrorScreen() {
         alert('Canvas not ready');
         return;
       }
-      const uri = await captureRef(canvasRef, { format: 'png', quality: 0.95 });
+      const uri = await captureRef(canvasRef.current, { format: 'png', quality: 0.95 });
       await Sharing.shareAsync(uri);
     } catch (e) {
       if (e instanceof Error) {
@@ -143,11 +143,12 @@ export default function MirrorScreen() {
     if (params && params.fromFlowchart) {
       setShapes([...exampleShapes]);
       setConnectors([...exampleConnectors]);
-    } else {
+    } else if (!params || Object.keys(params).length === 0) {
       setShapes([]);
       setConnectors([]);
     }
-  }, [params && params.fromFlowchart]);
+    // If params exist but not fromFlowchart, don't reset shapes/connectors (preserve user work)
+  }, [params && params.fromFlowchart, params]);
   const [tool, setTool] = React.useState<'select'|'line'>('select');
   const [pendingLine, setPendingLine] = React.useState<string|null>(null);
   const [selectedId, setSelectedId] = React.useState<string|null>(null);
@@ -194,8 +195,18 @@ export default function MirrorScreen() {
 
   function DraggableShape({ shape, onUpdate, onTap }: DraggableShapeProps) {
     const [dragging, setDragging] = React.useState(false);
+    const [startX, setStartX] = React.useState(0);
+    const [startY, setStartY] = React.useState(0);
+    const [initialX, setInitialX] = React.useState(shape.x);
+    const [initialY, setInitialY] = React.useState(shape.y);
     const scale = shape.scale || 1;
     const isSelected = selectedId === shape.id;
+
+    React.useEffect(() => {
+      setInitialX(shape.x);
+      setInitialY(shape.y);
+    }, [shape.x, shape.y]);
+
     return (
       <View
         style={{
@@ -205,18 +216,25 @@ export default function MirrorScreen() {
           zIndex: dragging ? 2 : 1,
           transform: [{ scale }],
         }}
-        {...{
-          onStartShouldSetResponder: () => true,
-          onResponderGrant: () => {
-            setDragging(true);
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={e => {
+          setDragging(true);
+          setStartX(e.nativeEvent.pageX);
+          setStartY(e.nativeEvent.pageY);
+          setInitialX(shape.x);
+          setInitialY(shape.y);
+        }}
+        onResponderMove={e => {
+          const dx = e.nativeEvent.pageX - startX;
+          const dy = e.nativeEvent.pageY - startY;
+          onUpdate(shape.id, initialX + dx, initialY + dy);
+        }}
+        onResponderRelease={e => {
+          setDragging(false);
+          const moved = Math.abs(e.nativeEvent.pageX - startX) + Math.abs(e.nativeEvent.pageY - startY);
+          if (moved < 10) {
             if (onTap) onTap(shape.id);
-          },
-          onResponderMove: (e) => {
-            const x = e.nativeEvent.pageX - 60;
-            const y = e.nativeEvent.pageY - 140;
-            onUpdate(shape.id, x, y);
-          },
-          onResponderRelease: () => setDragging(false),
+          }
         }}
       >
         {/* Controls if selected */}
@@ -231,28 +249,28 @@ export default function MirrorScreen() {
           </View>
         )}
         {shape.type === 'rect' && (
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setSelectedId(shape.id)}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => onTap && onTap(shape.id)}>
             <View style={{ width: 90, height: 50, backgroundColor: '#b3e5fc', borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#0288d1' }}>
               <Text style={{ fontWeight: 'bold', color: '#0288d1' }}>{shape.text}</Text>
             </View>
           </TouchableOpacity>
         )}
         {shape.type === 'ellipse' && (
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setSelectedId(shape.id)}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => onTap && onTap(shape.id)}>
             <View style={{ width: 70, height: 70, backgroundColor: '#ffe082', borderRadius: 35, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ffb300' }}>
               <Text style={{ fontWeight: 'bold', color: '#ffb300' }}>{shape.text}</Text>
             </View>
           </TouchableOpacity>
         )}
         {shape.type === 'diamond' && (
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setSelectedId(shape.id)}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => onTap && onTap(shape.id)}>
             <View style={{ width: 60, height: 60, transform: [{ rotate: '45deg' }], backgroundColor: '#c8e6c9', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#388e3c' }}>
               <Text style={{ fontWeight: 'bold', color: '#388e3c', transform: [{ rotate: '-45deg' }] }}>{shape.text}</Text>
             </View>
           </TouchableOpacity>
         )}
         {shape.type === 'text' && (
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setSelectedId(shape.id)}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => onTap && onTap(shape.id)}>
             <View style={{ padding: 6, backgroundColor: 'transparent' }}>
               <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 16 }}>{shape.text}</Text>
             </View>

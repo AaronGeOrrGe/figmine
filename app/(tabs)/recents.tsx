@@ -142,13 +142,34 @@ const RecentsSkeletonLoader = () => {
   );
 };
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { checkFigmaToken } from '../../api/figma';
+
 export default function RecentsScreen() {
   const [data, setData] = useState(mockData);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [checkingFigma, setCheckingFigma] = useState(true);
+  const [hasFigma, setHasFigma] = useState<boolean|null>(null);
   const router = useRouter();
 
   React.useEffect(() => {
+    // Check for Figma connection on mount
+    (async () => {
+      setCheckingFigma(true);
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const connected = await checkFigmaToken(token);
+          setHasFigma(connected);
+        } else {
+          setHasFigma(false);
+        }
+      } catch (e) {
+        setHasFigma(false);
+      }
+      setCheckingFigma(false);
+    })();
     const timer = setTimeout(() => {
       setLoading(false);
     }, 2000);
@@ -221,6 +242,22 @@ export default function RecentsScreen() {
       ) : (
         <>
           <Header />
+          {checkingFigma ? (
+            <View style={{ alignItems: 'center', margin: 24 }}>
+              <ActivityIndicator size="large" color="#3478F6" />
+              <Text style={{ marginTop: 8, color: '#3478F6' }}>Checking Figma connection...</Text>
+            </View>
+          ) : hasFigma === false ? (
+            <View style={{ alignItems: 'center', margin: 24 }}>
+              <Text style={{ color: '#d32f2f', marginBottom: 8, fontWeight: 'bold' }}>Not connected to Figma</Text>
+              <TouchableOpacity
+                style={{ backgroundColor: '#3478F6', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+                onPress={() => router.push('/connect-figma')}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Connect your Figma account</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           <ScrollView
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
